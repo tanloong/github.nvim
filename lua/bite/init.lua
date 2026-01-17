@@ -47,8 +47,8 @@ _H.callback_dict2buf = function(data, buf)
     table.insert(lines, "## Issue Description")
     table.insert(lines, "")
 
-    for line in data.body:gmatch("[^\r\n]+") do
-        table.insert(lines, line)
+    for line in data.body:gmatch "[^\r\n]+" do
+      table.insert(lines, line)
     end
     table.insert(lines, "")
   end
@@ -63,17 +63,14 @@ _H.callback_dict2buf = function(data, buf)
       local timestamp = comment.timestamp or ""
       local content = comment.content or ""
 
-      table.insert(lines, string.format("### Comment %d by @%s", i, author))
-      if timestamp ~= "" then
-        table.insert(lines, string.format("*%s*", timestamp))
-      end
+      table.insert(lines, string.format("### Comment %d", i))
+      table.insert(lines, string.format("@%s %s", author, timestamp))
       table.insert(lines, "")
 
-    for line in content:gmatch("[^\r\n]+") do
+      for line in content:gmatch "[^\r\n]+" do
         table.insert(lines, line)
         table.insert(lines, "")
-    end
-      table.insert(lines, "")
+      end
     end
   end
 
@@ -152,7 +149,6 @@ M.cmd.disable_keybindings = function()
   vim.notify "Keybindings off"
   M._is_mappings_on = false
   M._orig_mappings = {}
-
 end
 
 M.cmd.reload = function()
@@ -160,7 +156,7 @@ M.cmd.reload = function()
   for k, _ in pairs(package.loaded) do
     if k:sub(1, #pkg_name) == pkg_name then package.loaded[k] = nil end
   end
-  vim.api.nvim_del_user_command("B")
+  vim.api.nvim_del_user_command "B"
   require(pkg_name)
   vim.print(pkg_name .. " reloaded at " .. os.date "%H:%M:%S")
 end

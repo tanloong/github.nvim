@@ -166,7 +166,7 @@ function fetch_content(data) {
 
   for (const container of commentContainers) {
     let comment_header = container.querySelector("[data-testid='comment-header']");
-    let author_lhs = comment_header.querySelector(".sr-only").textContent; 
+    let author_lhs = comment_header.querySelector(".sr-only").textContent.trim().split(' ')[0]; 
     let author_rhs = Array.from(comment_header.querySelector('[class*="BadgesGroupContainer"]').children).map(child => child.textContent.trim()).join(', ');
     const author = author_lhs + ('(' + author_rhs + ')' ? ` (${author_rhs})` : '');
     
@@ -184,7 +184,7 @@ function fetch_content(data) {
 
   // --- 4. 添加回调标识 ---
   ret.callback = data["callback"];
-  console.log(ret);
+  // console.log(ret);
 
   // --- 5. 发送给本地服务 ---
   fetch('http://127.0.0.1:9001/fetch_content', {
