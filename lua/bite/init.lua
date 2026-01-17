@@ -128,7 +128,6 @@ M.cmd.enable_keybindings = function()
 
   vim.notify "Keybindings on"
   M._is_mappings_on = true
-  _H.warn_invalid_sep(true)
 end
 
 M.cmd.disable_keybindings = function()
@@ -154,7 +153,6 @@ M.cmd.disable_keybindings = function()
   M._is_mappings_on = false
   M._orig_mappings = {}
 
-  _H.warn_invalid_sep(false)
 end
 
 M.cmd.reload = function()

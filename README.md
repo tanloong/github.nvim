@@ -1,12 +1,13 @@
-将 GitHub Issue 和 PR 页面加载到 Neovim buffer 里。
+将 GitHub Issue 和 Pull Request 页面内容加载到 Neovim buffer 中离线阅读。
 
 ## 依赖
 
-1. python
+1. Python 3.7+
+2. Neovim 0.9+
 
 ## 安装
 
-1. 
+1. 克隆插件
 
 ```
 git clone https://github.com/tanloong/github.nvim
