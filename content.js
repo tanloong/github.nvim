@@ -169,7 +169,7 @@ function _fetch_issue() {
     let comment_header = container.querySelector("[data-testid='comment-header']");
     let author_lhs = comment_header.querySelector(".sr-only").textContent.trim().split(' ')[0]; 
     let author_rhs = Array.from(comment_header.querySelector('[class*="BadgesGroupContainer"]').children).map(child => child.textContent.trim()).join(', ');
-    const author = author_lhs + ('(' + author_rhs + ')' ? ` (${author_rhs})` : '');
+    const author = author_lhs + (author_rhs ? ` (${author_rhs})` : '');
     
     const contentEl = container.querySelector('.markdown-body');
     const content = contentEl ? contentEl.innerText.trim() : '';
@@ -220,7 +220,7 @@ function _fetch_pr() {
   for (const container of commentContainers) {
     let author_lhs = container.querySelector(".author").textContent.trim(); 
     let author_rhs = Array.from(container.querySelector('.d-flex > .d-none').children).map(child => child.textContent.trim()).join(', ');
-    const author = author_lhs + ('(' + author_rhs + ')' ? ` (${author_rhs})` : '');
+    const author = author_lhs + (author_rhs ? ` (${author_rhs})` : '');
     
     const contentEl = container.querySelector('.markdown-body');
     const content = contentEl ? contentEl.innerText.trim() : '';
