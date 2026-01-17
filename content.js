@@ -143,13 +143,14 @@ function nvim_log(msg, level = "INFO") {
   })
 }
 
-
-function fetch_content(data) {
-  const ret = {};
+function _fetch_issue() {
+  let ret = {};
 
   // --- 1. 提取 Issue 标题 ---
-  const titleEl = document.querySelector('h1[data-component="PH_Title"] bdi.markdown-title');
-  ret.title = titleEl ? titleEl.textContent.trim() : 'Untitled';
+  let md_title_el = document.querySelector('.markdown-title');
+  let num_el = md_title_el.nextElementSibling;
+  ret.title = md_title_el.textContent.trim() ;
+  ret.num = num_el.textContent.trim() ;
 
   // --- 2. 提取 Issue 正文（第一个 .react-issue-body）---
   const issueBodyContainer = document.querySelector('.react-issue-body');
@@ -182,6 +183,66 @@ function fetch_content(data) {
     }
   }
 
+  return ret
+}
+
+function expand_hidden_items() {
+  const intervalId = setInterval(() => {
+    const button = document.querySelector('button.ajax-pagination-btn');
+    
+    if (button) {
+      console.log('找到按钮，点击中...');
+      button.click();
+    } else {
+      console.log('按钮已消失，停止点击');
+      clearInterval(intervalId);
+    }
+  }, 1000);
+}
+
+
+function _fetch_pr() {
+  let ret = {};
+
+  // --- 1. 提取 Issue 标题 ---
+  let md_title_el = document.querySelector('.markdown-title');
+  let num_el = md_title_el.nextElementSibling;
+  ret.title = md_title_el.textContent.trim() ;
+  ret.num = num_el.textContent.trim() ;
+
+  // --- 2. 提取 Issue 正文（第一个 .react-issue-body）---
+  ret.body = document.querySelector('.timeline-comment-group .markdown-body').innerText.trim();
+
+  // --- 3. 提取所有评论（包括 issue body 之后的所有）---
+  const commentContainers = Array.from(document.querySelectorAll('.timeline-comment-group'));
+  ret.comments = [];
+
+  for (const container of commentContainers) {
+    let author_lhs = container.querySelector(".author").textContent.trim(); 
+    let author_rhs = Array.from(container.querySelector('.d-flex > .d-none').children).map(child => child.textContent.trim()).join(', ');
+    const author = author_lhs + ('(' + author_rhs + ')' ? ` (${author_rhs})` : '');
+    
+    const contentEl = container.querySelector('.markdown-body');
+    const content = contentEl ? contentEl.innerText.trim() : '';
+
+    // 尝试提取时间（相对时间文本）
+    const timeEl = container.querySelector('relative-time');
+    const timestamp = timeEl ? timeEl.getAttribute('datetime') || timeEl.title || timeEl.textContent : null;
+
+    if (content) {
+      ret.comments.push({ author, content, timestamp });
+    }
+  }
+
+  return ret
+}
+
+function fetch_content(data) {
+  expand_hidden_items();
+
+  let pr = window.location.pathname.includes('/pull/');
+  let ret = pr ? _fetch_pr() : _fetch_issue(); 
+  
   // --- 4. 添加回调标识 ---
   ret.callback = data["callback"];
   // console.log(ret);

@@ -40,6 +40,7 @@ _H.callback_dict2buf = function(data, buf)
 
   -- Title
   table.insert(lines, "# " .. (data.title or "Untitled"))
+  table.insert(lines, (data.num or "#Unknown number"))
   table.insert(lines, "")
 
   -- Body
