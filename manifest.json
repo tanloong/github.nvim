@@ -1,20 +1,22 @@
 {
-  "manifest_version": 3,
-  "name": "Text Box Sync",
+  "manifest_version": 1,
+  "name": "GitHub.nvim",
   "version": "1.0",
-  "description": "Sync text box content to Neovim",
+  "description": "Sync GitHub issues and pull requests to Neovim",
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "notifications"
   ],
   "host_permissions": [
-    "https://aidp.bytedance.com/operation/task-v2*"
+    "http://127.0.0.1:9001/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://aidp.bytedance.com/operation/task-v2*"
+        "https://github.com/*/*/issues/*",
+        "https://github.com/*/*/pull/*"
       ],
       "js": [
         "content.js"

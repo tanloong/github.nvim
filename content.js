@@ -56,33 +56,9 @@ function toggle_sse() {
       console.log(event.data);
       let data = JSON.parse(event.data)[0]
       switch (data["action"]) {//{{{
-        case "play":
-          play(data);
-          break;
-        case "toggle":
-          toggle();
-          break;
-        case "back":
-          back(data);
-          break;
-        case "put":
-          editor2browser(data);
-          break;
-        case "init_transcripts":
-          init_transcripts();
-          break;
-        case "push_slice":
-          push_slice(data);
-          break;
-        case "fetch_slice":
-          fetch_slice(data);
-          break;
-        case "fetch_progress":
-          fetch_progress(data);
-          break;
-        case "speed":
-          speed(data);
-          break;
+        // case "put":
+        //   editor2browser(data);
+        //   break;
         case "close_sse":
           close_sse();
           break;
@@ -93,7 +69,6 @@ function toggle_sse() {
           console.log('Unknown action:', data["action"]);
           break;
       };
-      editor2browser(data);
     }//}}}
 
     // 处理错误
@@ -134,31 +109,31 @@ const clickEvent = new Event('click', {
   cancelable: true  // 事件是否可以取消
 });
 
-function editor2browser(data) {
-  let root = get_root()
-  var section, subsection, section_head, section_body, section_tail, label, containers, elem
-  // 创建一个 input 事件
-  for (let i = 0; i < root.children.length; i++) {
-    section = root.children[i].children[0];
-    [section_head, section_body, section_tail] = section.children;
-    label = section_head.querySelector('span').textContent.trim();
-    if (label in data) { // find target section
-      containers = section_body.querySelectorAll(".neeko-container");
-      containers.forEach(container => {
-        if (container.querySelectorAll(".neeko-text").length !== 2) {return;}
-
-        subsection = container.querySelector(".neeko-text")?.textContent.trim();
-        if (subsection in data[label]) { // find target subsection
-          elem = container.querySelector("textarea");
-          if (typeof elem == 'undefined' || elem == null) {return;}
-          elem.value = data[label][subsection];
-          // 触发输入事件，模拟手输
-          elem.dispatchEvent(changeEvent);
-        }
-      });
-    }
-  };
-}
+// function editor2browser(data) {
+//   let root = get_root()
+//   var section, subsection, section_head, section_body, section_tail, label, containers, elem
+//   // 创建一个 input 事件
+//   for (let i = 0; i < root.children.length; i++) {
+//     section = root.children[i].children[0];
+//     [section_head, section_body, section_tail] = section.children;
+//     label = section_head.querySelector('span').textContent.trim();
+//     if (label in data) { // find target section
+//       containers = section_body.querySelectorAll(".neeko-container");
+//       containers.forEach(container => {
+//         if (container.querySelectorAll(".neeko-text").length !== 2) {return;}
+//
+//         subsection = container.querySelector(".neeko-text")?.textContent.trim();
+//         if (subsection in data[label]) { // find target subsection
+//           elem = container.querySelector("textarea");
+//           if (typeof elem == 'undefined' || elem == null) {return;}
+//           elem.value = data[label][subsection];
+//           // 触发输入事件，模拟手输
+//           elem.dispatchEvent(changeEvent);
+//         }
+//       });
+//     }
+//   };
+// }
 
 function nvim_log(msg, level = "INFO") {
   fetch('http://127.0.0.1:9001/log', {
@@ -168,241 +143,59 @@ function nvim_log(msg, level = "INFO") {
   })
 }
 
-function play(data) {
-  let root = get_root()
-  var section, subsection, section_head, section_body, section_tail, label, containers, elem
-  for (let i = 0; i < root.children.length; i++) {
-    section = root.children[i].children[0];
-    [section_head, section_body, section_tail] = section.children;
-    label = section_head.querySelector('span').textContent.trim();
-    if (label === data["section"]) {
-      section_head.querySelector("button").dispatchEvent(clickEvent);
-      break;
-    }
-  }
-}
-
-function toggle() {
-  let btn = get_btn_toggle()
-  btn.dispatchEvent(clickEvent)
-}
-
-function back(data) {
-  let btn = get_btn_back()
-  let count = Number(data['count'])
-  for (let i = 1; i <= count; i++) {
-    btn.dispatchEvent(clickEvent)
-  }
-  nvim_log(`已后退${count}秒`);
-}
-
-function init_transcripts() {
-  let root = get_root()
-  var section, subsection, section_head, section_body, section_tail, label, containers, elem, btn
-  for (let i = 0; i < root.children.length; i++) {
-    section = root.children[i].children[0];
-    [section_head, section_body, section_tail] = section.children;
-    btn = section_body.querySelector("button")
-    btn.dispatchEvent(clickEvent)
-  }
-  nvim_log("英文转写已初始化");
-
-  // 通知编辑器重新 fetch_content
-  fetch('http://127.0.0.1:9001/', {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({callback: "fetch_content"})
-  }).then(function (res) {
-    console.log(res);
-  })
-
-}
-
-function get_root() {
-  let root = document.querySelector(".neeko-root")?.querySelector("div:nth-child(3) > .neeko-container")
-  return root
-}
-function get_wave() {
-  let wave = document.querySelector(".neeko-root")?.querySelector("wave")
-  return wave
-}
-function get_combobox() {
-  let combobox = document.querySelector("div.neeko-root")?.querySelector("div.container-speed > div[role='combobox']")
-  return combobox
-}
-function get_btn_back() {
-  let btn = document.querySelector(".neeko-root")?.querySelector("div.btns-play > svg:nth-child(2)")
-  return btn
-}
-function get_btn_toggle() {
-  let btn = document.querySelector(".neeko-root")?.querySelector("div.btns-play > svg:nth-child(3)")
-  return btn
-}
 
 function fetch_content(data) {
-  let root = get_root()
-  let wave = get_wave()
-  var section, subsection, section_head, section_body, section_tail, label, containers, elem
-  let ret = {}
-  for (let i = 0; i < root.children.length; i++) {
-    // 1. 收集文本框内容
-    section = root.children[i].children[0];
-    [section_head, section_body, section_tail] = section.children;
-    //  // 序号，如1、2等，每大条一共约二三十个序号
-    label = section_head.querySelector('span').textContent.trim();
-    containers = section_body.querySelectorAll(".neeko-container");
-    var subsection_text = {};
-    // containers.forEach(c => {console.log(c.querySelectorAll(".neeko-text").length)}) 返回
-    // 3个12 (抛弃 3 个只读文本框，模型识别文本、模型识别文本和顺滑、模型预翻译文本)、6个2 (这 6 个才是需要的)、2个0
-    containers.forEach(container => {
-      if (container.querySelectorAll(".neeko-text").length !== 2) {return;}
+  const ret = {};
 
-      subsection = container.querySelector(".neeko-text")?.textContent.trim();
-      if (typeof subsection == 'undefined' || subsection == null) {return;}
+  // --- 1. 提取 Issue 标题 ---
+  const titleEl = document.querySelector('h1[data-component="PH_Title"] bdi.markdown-title');
+  ret.title = titleEl ? titleEl.textContent.trim() : 'Untitled';
 
-      elem = container.querySelector("textarea")
-      if (typeof elem == 'undefined' || elem == null) {return;}
-
-      let text = elem.textContent.trim();
-      subsection_text[subsection] = text;
-    });
-    if (!subsection_text["人工英文断句结果"]) {subsection_text["人工英文断句结果"] = subsection_text["人工英文转写结果"]}
-    // 2. 收集起止时间
-    let region = wave.querySelector(`region[data-id="${i + 1}"`);
-    if (region === null) {
-      subsection_text['start'] = "nil";
-      subsection_text['end'] = "nil";
-    } else {
-      let start = region.querySelector("handle.waver-handle.waver-handle-start").getBoundingClientRect().x;
-      let end = region.querySelector("handle.waver-handle.waver-handle-end").getBoundingClientRect().x;
-      subsection_text['start'] = start;
-      subsection_text['end'] = end;
-    }
-    // 3. 保存到 data
-    ret[label] = subsection_text
+  // --- 2. 提取 Issue 正文（第一个 .react-issue-body）---
+  const issueBodyContainer = document.querySelector('.react-issue-body');
+  if (issueBodyContainer) {
+    const bodyMarkdown = issueBodyContainer.querySelector('.markdown-body');
+    ret.body = bodyMarkdown ? bodyMarkdown.innerText.trim() : '';
+  } else {
+    ret.body = '';
   }
 
-  ret["callback"] = data["callback"]
+  // --- 3. 提取所有评论（包括 issue body 之后的所有）---
+  const commentContainers = Array.from(document.querySelectorAll('.react-issue-comment'));
+  ret.comments = [];
+
+  for (const container of commentContainers) {
+    const authorLink = container.querySelector("[data-testid='comment-header']");
+    const author = authorLink ? authorLink.textContent.trim() : 'unknown';
+    
+    const contentEl = container.querySelector('.markdown-body');
+    const content = contentEl ? contentEl.innerText.trim() : '';
+
+    // 尝试提取时间（相对时间文本）
+    const timeEl = container.querySelector('relative-time');
+    const timestamp = timeEl ? timeEl.getAttribute('datetime') || timeEl.title || timeEl.textContent : null;
+
+    if (content) {
+      ret.comments.push({ author, content, timestamp });
+    }
+  }
+
+  // --- 4. 添加回调标识 ---
+  ret.callback = data["callback"];
+  console.log(ret);
+
+  // --- 5. 发送给本地服务 ---
   fetch('http://127.0.0.1:9001/fetch_content', {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(ret)
   }).then(function (res) {
-    console.log(res);
-  })
+    console.log('GitHub issue content sent to server:', res.ok);
+  }).catch(err => {
+    console.error('Failed to send issue content:', err);
+  });
 }
 
-function _fetch_slice() {
-  let ret = {}
-
-  let wave = get_wave()
-  let regions = wave.querySelectorAll("region");
-  for (let i = 0; i < regions.length; i++) {
-    let region = regions[i]
-    let start = region.querySelector("handle.waver-handle.waver-handle-start").getBoundingClientRect().x;
-    let end = region.querySelector("handle.waver-handle.waver-handle-end").getBoundingClientRect().x;
-    start = String(start);
-    end = String(end);
-    ret[String(i + 1)] = {start: start, end: end}
-  }
-  return ret
-}
-
-function fetch_slice(data) {
-  let ret = _fetch_slice()
-  ret["callback"] = data["callback"]
-  fetch('http://127.0.0.1:9001/fetch_slice', {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(ret)
-  }).then(function (res) {
-    console.log(res);
-  })
-}
-
-function fetch_progress(data) {
-  let wave = get_wave()?.querySelector("wave")
-  let x = String(wave.getBoundingClientRect().right);
-  let ret = {x: x, callback: data["callback"]}
-  fetch('http://127.0.0.1:9001/fetch_progress', {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(ret)
-  }).then(function (res) {
-    console.log(res);
-  })
-}
-
-function push_slice(data) {
-  let section = data['section'];
-  let edge = data['edge'];
-  let section_edge_pos1 = data['section_edge_pos'];
-  let section_edge_pos2 = _fetch_slice();
-
-  // 如果在上一次fetch_slice之后，播放过音频，位置时间比会变化，导致要设置的边界位置与期望时间点不一致，
-  // 这里获取最新的边界位置判断是否有变，若是则要求按新的位置重新设置。
-  let ok = false;
-  for (let section in section_edge_pos1) {
-    console.log(`section_edge_pos1\nstart: ${section_edge_pos1[section]["start"]}, end: ${section_edge_pos1[section]["end"]}\n\nsection_edge_pos2\nstart: ${section_edge_pos2[section]["start"]}, end: ${section_edge_pos2[section]["end"]}`);
-    if (
-      section_edge_pos1[section]["start"] === section_edge_pos2[section]["start"] &&
-      section_edge_pos1[section]["end"] === section_edge_pos2[section]["end"]
-    ) {ok = true; break;}
-  }
-  if (!ok) {nvim_log("设置边界失败，原位置时间比已变更，请重新设置", "ERROR"); fetch_slice({callback: "callback_receive_slice"}); return;}
-
-  let wave = get_wave()
-  let region = wave.querySelector(`region[data-id="${section}"]`);
-  let handle = region.querySelector(`handle.waver-handle.waver-handle-${edge}`);
-  let rect_handle = handle.getBoundingClientRect();
-
-  let x1 = rect_handle.x
-  let y1 = rect_handle.y
-  let x2 = Number(data["x"])
-  let y2 = y1
-  // 创建鼠标按下、移动、松开事件
-  let mousedownEvent = new MouseEvent('mousedown', {bubbles: true, cancelable: true, clientX: x1, clientY: y1});
-  let mousemoveEvent = new MouseEvent('mousemove', {bubbles: true, cancelable: true, clientX: x2, clientY: y2});
-  let mouseupEvent = new MouseEvent('mouseup', {bubbles: true, cancelable: true, clientX: x2, clientY: y2});
-  handle.dispatchEvent(mousedownEvent); handle.dispatchEvent(mousemoveEvent); handle.dispatchEvent(mouseupEvent)
-  nvim_log(`Set section ${section} ${edge} as ${x2}`)
-}
-
-
-function speed(data) {
-  let offset = Number(data["offset"])
-  combobox = get_combobox()
-  let before = combobox.querySelector("span[class='arco-select-view-value']").textContent.trim()
-  let after = null
-
-  // 点开下拉菜单
-  let popup = document.querySelector(".arco-trigger > .arco-select-popup")
-  if (popup === null) {
-    combobox.dispatchEvent(clickEvent);
-    popup = document.querySelector(".arco-trigger > .arco-select-popup")
-  }
-  if (popup === null) {nvim_log("倍速失败，找不到下拉菜单", "ERROR"); return };
-
-  let choices = popup.querySelectorAll("li")
-  for (let i = 1; i <= choices.length; i++) {
-    if (choices[i - 1].textContent.trim() === before) {
-      after = i + offset;
-      break;
-    }
-  }
-  if (after === null) {nvim_log("倍速失败，找不到当前速度", "ERROR"); return };
-  if (after < 1) {nvim_log(`倍速失败，${before}已最小`, "ERROR"); return };
-  if (after > choices.length) {nvim_log(`倍速失败，${before}已最大`, "ERROR"); return };
-
-  // 点击目标倍速，通知 nvim
-  let li = popup.querySelector(`li:nth-child(${after})`)
-  li.dispatchEvent(clickEvent);
-  nvim_log(li.textContent.trim())
-
-  // 若下拉菜单未关闭，将其关闭
-  popup = document.querySelector(".arco-trigger > .arco-select-popup")
-  if (popup !== null) {combobox.dispatchEvent(clickEvent);};
-}
 
 //////////////////////////////////NOTIFICATION//////////////////////////////////
 
