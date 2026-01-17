@@ -1,7 +1,8 @@
 #!/usr/bin/env lua
 
-local autocmd = vim.api.nvim_create_autocmd
-local augroup = vim.api.nvim_create_augroup
+local api = vim.api
+local autocmd = api.nvim_create_autocmd
+local augroup = api.nvim_create_augroup
 
 local _H = {}
 local M = {
@@ -73,7 +74,9 @@ _H.callback_dict2buf = function(data, buf)
     end
   end
 
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  api.nvim_buf_set_option(buf, 'filetype', 'markdown')
+  vim.notify("Content loaded and buffer set to markdown", vim.log.levels.INFO)
 end
 
 M.cmd.fetch_content = function()
@@ -136,7 +139,7 @@ M.cmd.disable_keybindings = function()
     local mode, lhs, _
     for _, entry in ipairs(M.config.keymaps) do
       mode, lhs, _, _ = unpack(entry)
-      pcall(vim.api.nvim_buf_del_keymap, 0, mode, lhs)
+      pcall(api.nvim_buf_del_keymap, 0, mode, lhs)
     end
   end
   for _, mapargs in ipairs(M._orig_mappings) do
@@ -155,12 +158,12 @@ M.cmd.reload = function()
   for k, _ in pairs(package.loaded) do
     if k:sub(1, #pkg_name) == pkg_name then package.loaded[k] = nil end
   end
-  vim.api.nvim_del_user_command "B"
+  api.nvim_del_user_command "B"
   require(pkg_name)
   vim.print(pkg_name .. " reloaded at " .. os.date "%H:%M:%S")
 end
 
-vim.api.nvim_create_user_command("B", function(a)
+api.nvim_create_user_command("B", function(a)
   ---@type string[]
   local actions = a.fargs
   local cmd = M.cmd[actions[1]]
