@@ -63,8 +63,7 @@ _H.callback_dict2buf = function(data, buf)
       local timestamp = comment.timestamp or ""
       local content = comment.content or ""
 
-      table.insert(lines, string.format("### Comment %d", i))
-      table.insert(lines, string.format("@%s %s", author, timestamp))
+      table.insert(lines, string.format("### Comment %d @%s %s", i, author, timestamp))
       table.insert(lines, "")
 
       for line in content:gmatch "[^\r\n]+" do

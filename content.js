@@ -143,16 +143,120 @@ function nvim_log(msg, level = "INFO") {
   })
 }
 
-function _fetch_issue() {
+// 提取通用功能
+function extractTitleAndNumber() {
   let ret = {};
-
-  // --- 1. 提取 Issue 标题 ---
   let md_title_el = document.querySelector('.markdown-title');
-  let num_el = md_title_el.nextElementSibling;
-  ret.title = md_title_el.textContent.trim() ;
-  ret.num = num_el.textContent.trim() ;
+  if (md_title_el) {
+    ret.title = md_title_el.textContent.trim();
+    let num_el = md_title_el.nextElementSibling;
+    ret.num = num_el ? num_el.textContent.trim() : '#Unknown';
+  } else {
+    ret.title = 'Untitled';
+    ret.num = '#Unknown';
+  }
+  return ret;
+}
 
-  // --- 2. 提取 Issue 正文（第一个 .react-issue-body）---
+function extractComments(selector, getAuthorFn) {
+  const commentContainers = Array.from(document.querySelectorAll(selector));
+  const comments = [];
+
+  for (const container of commentContainers) {
+    const author = getAuthorFn(container);
+    
+    const contentEl = container.querySelector('.markdown-body');
+    const content = contentEl ? contentEl.innerText.trim() : '';
+
+    // 提取时间
+    const timeEl = container.querySelector('relative-time');
+    const timestamp = timeEl ? 
+      (timeEl.getAttribute('datetime') || timeEl.title || timeEl.textContent) : 
+      null;
+
+    if (content) {
+      comments.push({ author, content, timestamp });
+    }
+  }
+
+  return comments;
+}
+
+// Issue 特定的作者提取函数
+function getIssueAuthor(container) {
+  let comment_header = container.querySelector("[data-testid='comment-header']");
+  if (!comment_header) return 'Unknown';
+  
+  let author_lhs = comment_header.querySelector(".sr-only")?.textContent.trim().split(' ')[0] || 'Unknown';
+  let author_rhs = '';
+  
+  const badgesContainer = comment_header.querySelector('[class*="BadgesGroupContainer"]');
+  if (badgesContainer) {
+    author_rhs = Array.from(badgesContainer.children)
+      .map(child => child.textContent.trim())
+      .join(', ');
+  }
+  
+  return author_lhs + (author_rhs ? ` (${author_rhs})` : '');
+}
+
+// PR 特定的作者提取函数
+function getPRAuthor(container) {
+  let author_lhs = container.querySelector(".author")?.textContent.trim() || 'Unknown';
+  let author_rhs = '';
+  
+  const dNoneElement = container.querySelector('.d-flex > .d-none');
+  if (dNoneElement) {
+    author_rhs = Array.from(dNoneElement.children)
+      .map(child => child.textContent.trim())
+      .join(', ');
+  }
+  
+  return author_lhs + (author_rhs ? ` (${author_rhs})` : '');
+}
+
+// 改进的异步 expand 函数
+async function expand_hidden_items(pr) {
+  return new Promise((resolve) => {
+    let selector = pr ? 
+      'button.ajax-pagination-btn' : 
+      'button[type="button"][data-testid="issue-timeline-load-more-load-top"]';
+    
+    let maxAttempts = 30;
+    let attempts = 0;
+    
+    const intervalId = setInterval(() => {
+      attempts++;
+      const button = document.querySelector(selector);
+      
+      if (button) {
+        // 检查按钮是否可用
+        if (button.getAttribute('aria-disabled') !== 'true' && 
+            button.getAttribute('data-loading') !== 'true' &&
+            !button.disabled) {
+          console.log(`找到按钮，点击中... (尝试 ${attempts})`);
+          button.click();
+        }
+      } else {
+        console.log('按钮已消失，停止点击');
+        clearInterval(intervalId);
+        resolve(true);
+      }
+      
+      // 安全限制，防止无限循环
+      if (attempts >= maxAttempts) {
+        console.log('达到最大尝试次数，停止点击');
+        clearInterval(intervalId);
+        resolve(false);
+      }
+    }, 1500); // 稍微增加间隔，给页面加载时间
+  });
+}
+
+function _fetch_issue() {
+  let ret = extractTitleAndNumber();
+
+  // 提取正文
   const issueBodyContainer = document.querySelector('.react-issue-body');
   if (issueBodyContainer) {
     const bodyMarkdown = issueBodyContainer.querySelector('.markdown-body');
@@ -161,104 +265,62 @@ function _fetch_issue() {
     ret.body = '';
   }
 
-  // --- 3. 提取所有评论（包括 issue body 之后的所有）---
-  const commentContainers = Array.from(document.querySelectorAll('.react-issue-comment'));
-  ret.comments = [];
+  // 提取评论
+  ret.comments = extractComments('.react-issue-comment', getIssueAuthor);
 
-  for (const container of commentContainers) {
-    let comment_header = container.querySelector("[data-testid='comment-header']");
-    let author_lhs = comment_header.querySelector(".sr-only").textContent.trim().split(' ')[0]; 
-    let author_rhs = Array.from(comment_header.querySelector('[class*="BadgesGroupContainer"]').children).map(child => child.textContent.trim()).join(', ');
-    const author = author_lhs + (author_rhs ? ` (${author_rhs})` : '');
-    
-    const contentEl = container.querySelector('.markdown-body');
-    const content = contentEl ? contentEl.innerText.trim() : '';
-
-    // 尝试提取时间（相对时间文本）
-    const timeEl = container.querySelector('relative-time');
-    const timestamp = timeEl ? timeEl.getAttribute('datetime') || timeEl.title || timeEl.textContent : null;
-
-    if (content) {
-      ret.comments.push({ author, content, timestamp });
-    }
-  }
-
-  return ret
+  return ret;
 }
-
-function expand_hidden_items() {
-  const intervalId = setInterval(() => {
-    const button = document.querySelector('button.ajax-pagination-btn');
-    
-    if (button) {
-      console.log('找到按钮，点击中...');
-      button.click();
-    } else {
-      console.log('按钮已消失，停止点击');
-      clearInterval(intervalId);
-    }
-  }, 1000);
-}
-
 
 function _fetch_pr() {
-  let ret = {};
+  let ret = extractTitleAndNumber();
 
-  // --- 1. 提取 Issue 标题 ---
-  let md_title_el = document.querySelector('.markdown-title');
-  let num_el = md_title_el.nextElementSibling;
-  ret.title = md_title_el.textContent.trim() ;
-  ret.num = num_el.textContent.trim() ;
+  // 提取正文
+  const bodyElement = document.querySelector('.timeline-comment-group .markdown-body');
+  ret.body = bodyElement ? bodyElement.innerText.trim() : '';
 
-  // --- 2. 提取 Issue 正文（第一个 .react-issue-body）---
-  ret.body = document.querySelector('.timeline-comment-group .markdown-body').innerText.trim();
+  // 提取评论
+  ret.comments = extractComments('.timeline-comment-group', getPRAuthor);
 
-  // --- 3. 提取所有评论（包括 issue body 之后的所有）---
-  const commentContainers = Array.from(document.querySelectorAll('.timeline-comment-group'));
-  ret.comments = [];
+  return ret;
+}
 
-  for (const container of commentContainers) {
-    let author_lhs = container.querySelector(".author").textContent.trim(); 
-    let author_rhs = Array.from(container.querySelector('.d-flex > .d-none').children).map(child => child.textContent.trim()).join(', ');
-    const author = author_lhs + (author_rhs ? ` (${author_rhs})` : '');
+// 主函数
+async function fetch_content(data) {
+  try {
+    let pr = window.location.pathname.includes('/pull/');
     
-    const contentEl = container.querySelector('.markdown-body');
-    const content = contentEl ? contentEl.innerText.trim() : '';
-
-    // 尝试提取时间（相对时间文本）
-    const timeEl = container.querySelector('relative-time');
-    const timestamp = timeEl ? timeEl.getAttribute('datetime') || timeEl.title || timeEl.textContent : null;
-
-    if (content) {
-      ret.comments.push({ author, content, timestamp });
+    console.log('开始展开隐藏内容...');
+    const expandSuccess = await expand_hidden_items(pr);
+    
+    if (!expandSuccess) {
+      console.warn('展开隐藏内容可能未完全完成，继续处理...');
     }
+    
+    console.log('开始提取内容...');
+    let ret = pr ? _fetch_pr() : _fetch_issue();
+    
+    // 添加回调标识
+    ret.callback = data["callback"];
+    
+    console.log('内容提取完成，发送到服务器...');
+    
+    // 发送给本地服务
+    const response = await fetch('http://127.0.0.1:9001/fetch_content', {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(ret)
+    });
+    
+    if (response.ok) {
+      console.log('GitHub 内容已成功发送到服务器');
+    } else {
+      console.error('服务器响应错误:', response.status);
+    }
+    
+  } catch (err) {
+    console.error('处理过程中发生错误:', err);
   }
-
-  return ret
 }
-
-function fetch_content(data) {
-  expand_hidden_items();
-
-  let pr = window.location.pathname.includes('/pull/');
-  let ret = pr ? _fetch_pr() : _fetch_issue(); 
-  
-  // --- 4. 添加回调标识 ---
-  ret.callback = data["callback"];
-  // console.log(ret);
-
-  // --- 5. 发送给本地服务 ---
-  fetch('http://127.0.0.1:9001/fetch_content', {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(ret)
-  }).then(function (res) {
-    console.log('GitHub issue content sent to server:', res.ok);
-  }).catch(err => {
-    console.error('Failed to send issue content:', err);
-  });
-}
-
 
 //////////////////////////////////NOTIFICATION//////////////////////////////////
 
